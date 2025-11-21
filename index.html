@@ -1035,11 +1035,16 @@
         // Load entries from entries.json
         async function loadEntries() {
             try {
+                console.log("Attempting to load entries.json...");
                 const response = await fetch('entries.json');
+                console.log("Response status:", response.status, response.ok);
+                
                 if (!response.ok) {
-                    throw new Error('entries.json not found');
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
+                
                 const data = await response.json();
+                console.log("entries.json loaded successfully:", data);
                 
                 entries = data.entries.map(e => e.display);
                 entriesMap = {};
@@ -1047,50 +1052,52 @@
                     entriesMap[e.display] = e.file;
                 });
                 
-                console.log("Loaded entries:", entries);
+                console.log("Processed entries:", entries);
+                console.log("Entries map:", entriesMap);
                 return true;
             } catch (error) {
                 console.error("Error loading entries.json:", error);
-                console.log("Using fallback entry detection...");
+                console.warn("Falling back to automatic entry detection...");
                 return false;
             }
         }
 
-        // Fallback: detect entries by checking file existence
-        async function detectEntriesFromFolder() {
-            try {
-                const possibleEntries = [
-                    'A', 'AA', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 'AI', 'AJ', 'AK', 'AL', 'AM', 'AN',
-                    'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
-                ];
+        // Fallback: Auto-detect entries from predefined list
+        async function autoDetectEntries() {
+            console.log("Auto-detecting entries from file list...");
+            
+            // These are the known files in your entries folder
+            const knownFiles = [
+                { file: 'DSKEspenilla.jpeg', display: 'DSK Espenilla' },
+                { file: 'EDBMolina.png', display: 'EDB Molina' },
+                { file: 'EDNabe.jpeg', display: 'ED Nabe' },
+                { file: 'ESBantas.jpg', display: 'ES Bantas' },
+                { file: 'IPParone.jpeg', display: 'IP Parone' },
+                { file: 'JATMablay.jpg', display: 'JAT Mablay' },
+                { file: 'JCBNapadao.jpg', display: 'JCB Napadao' },
+                { file: 'JDEbil.jpeg', display: 'JD Ebil' },
+                { file: 'JOPalicacad.jpeg', display: 'JO Palicacad' },
+                { file: 'JRBelino.jpg', display: 'JR Belino' },
+                { file: 'LGPoligso.jpeg', display: 'LG Poligso' },
+                { file: 'LMGTamson.png', display: 'LMG Tamson' },
+                { file: 'MPPocyoy.jpeg', display: 'MP Pocyoy' },
+                { file: 'Ngeaw.jpeg', display: 'N Geaw' },
+                { file: 'RNCawis.jpeg', display: 'RN Cawis' },
+                { file: 'RTBona.jpeg', display: 'RT Bona' },
+                { file: 'VGAPatal.jpg', display: 'VGA Patal' },
+                { file: 'WDBesa-ang.png', display: 'WD Besa-ang' },
+                { file: 'WSBadeng.jpeg', display: 'WS Badeng' }
+            ];
 
-                const loadedEntries = [];
-                const extensions = ['png', 'jpg', 'jpeg', 'gif', 'webp'];
+            entries = knownFiles.map(e => e.display);
+            entriesMap = {};
+            knownFiles.forEach(e => {
+                entriesMap[e.display] = e.file;
+            });
 
-                for (const entry of possibleEntries) {
-                    for (const ext of extensions) {
-                        try {
-                            const response = await fetch(`entries/${entry}.${ext}`, { method: 'HEAD' });
-                            if (response.ok) {
-                                loadedEntries.push(entry);
-                                entriesMap[entry] = `${entry}.${ext}`;
-                                break;
-                            }
-                        } catch (e) {
-                            // Continue
-                        }
-                    }
-                }
-
-                if (loadedEntries.length > 0) {
-                    entries = loadedEntries;
-                    console.log("Auto-detected entries:", entries);
-                    return true;
-                }
-            } catch (error) {
-                console.error("Error detecting entries:", error);
-            }
-            return false;
+            console.log(`✓ Auto-detected ${entries.length} entries`);
+            console.log("Entries:", entries);
+            return true;
         }
 
         const MAX_RATINGS = 3;
@@ -1494,18 +1501,41 @@ ${JSON.stringify(results, null, 2)}
 
         // Initialize
         async function initializeApp() {
-            // First, load entries
-            const entriesLoaded = await loadEntries();
+            console.log("=== Initializing App ===");
+            
+            // First, try to load entries from entries.json
+            console.log("Attempting to load entries.json...");
+            let entriesLoaded = await loadEntries();
+            
+            // If JSON loading failed, use auto-detection (fallback)
             if (!entriesLoaded) {
-                await detectEntriesFromFolder();
+                console.log("JSON loading failed, using auto-detection fallback...");
+                entriesLoaded = await autoDetectEntries();
             }
 
-            if (entries.length === 0) {
-                console.error("No entries found! Please check entries.json or entries folder.");
-                document.getElementById('gallery').innerHTML = '<div class="no-entries">❌ No entries found. Please upload map files to the entries folder.</div>';
+            // Check if we got any entries
+            if (!entriesLoaded || entries.length === 0) {
+                console.error("❌ CRITICAL: No entries found! entries array:", entries);
+                const errorMsg = `
+                    <div style="text-align: center; padding: 40px; color: white;">
+                        <h2>❌ No Map Entries Found</h2>
+                        <p>Could not load map entries from either entries.json or auto-detection.</p>
+                        <p style="margin-top: 20px; font-size: 14px; opacity: 0.9;">
+                            <strong>Troubleshooting:</strong><br>
+                            1. Check that entries/ folder exists with map images<br>
+                            2. Check browser console (F12 → Console) for error messages<br>
+                            3. Ensure you're accessing via http:// not file://
+                        </p>
+                    </div>
+                `;
+                document.getElementById('gallery').innerHTML = errorMsg;
                 return;
             }
 
+            console.log(`✓ Successfully loaded ${entries.length} entries`);
+            console.log("Entries list:", entries);
+            console.log("Entries map:", entriesMap);
+            
             // Initialize storage after entries are loaded
             initializeStorage();
             
@@ -1524,6 +1554,7 @@ ${JSON.stringify(results, null, 2)}
         }
 
         // Start the app
+        console.log("Page loaded, starting app initialization...");
         initializeApp();
     </script>
 </body>
