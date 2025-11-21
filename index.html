@@ -1028,11 +1028,70 @@
             useFirebase = false;
         }
 
-        // Entry list
-        const entries = [
-            'A', 'AA', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 'AI', 'AJ', 'AK', 'AL', 'AM', 'AN',
-            'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
-        ];
+        // Entry list - will be populated dynamically from entries.json
+        let entries = [];
+        let entriesMap = {}; // Maps entry name to file information
+
+        // Load entries from entries.json
+        async function loadEntries() {
+            try {
+                const response = await fetch('entries.json');
+                if (!response.ok) {
+                    throw new Error('entries.json not found');
+                }
+                const data = await response.json();
+                
+                entries = data.entries.map(e => e.display);
+                entriesMap = {};
+                data.entries.forEach(e => {
+                    entriesMap[e.display] = e.file;
+                });
+                
+                console.log("Loaded entries:", entries);
+                return true;
+            } catch (error) {
+                console.error("Error loading entries.json:", error);
+                console.log("Using fallback entry detection...");
+                return false;
+            }
+        }
+
+        // Fallback: detect entries by checking file existence
+        async function detectEntriesFromFolder() {
+            try {
+                const possibleEntries = [
+                    'A', 'AA', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 'AI', 'AJ', 'AK', 'AL', 'AM', 'AN',
+                    'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
+                ];
+
+                const loadedEntries = [];
+                const extensions = ['png', 'jpg', 'jpeg', 'gif', 'webp'];
+
+                for (const entry of possibleEntries) {
+                    for (const ext of extensions) {
+                        try {
+                            const response = await fetch(`entries/${entry}.${ext}`, { method: 'HEAD' });
+                            if (response.ok) {
+                                loadedEntries.push(entry);
+                                entriesMap[entry] = `${entry}.${ext}`;
+                                break;
+                            }
+                        } catch (e) {
+                            // Continue
+                        }
+                    }
+                }
+
+                if (loadedEntries.length > 0) {
+                    entries = loadedEntries;
+                    console.log("Auto-detected entries:", entries);
+                    return true;
+                }
+            } catch (error) {
+                console.error("Error detecting entries:", error);
+            }
+            return false;
+        }
 
         const MAX_RATINGS = 3;
 
@@ -1229,16 +1288,20 @@
             }
 
             gallery.innerHTML = filtered.map(entry => {
-                const data = ratings[entry];
+                const data = ratings[entry] || { totalScore: 0, count: 0 };
                 const averageScore = data.count > 0 ? (data.totalScore / data.count).toFixed(2) : '-';
+                
+                // Get the actual filename from the map
+                const filename = entriesMap[entry] || entry;
+                const imagePath = `entries/${filename}`;
 
                 return `
                     <div class="entry-card">
-                        <div class="entry-image-container" onclick="openImageModal('entries/${entry}.png', '${entry}')">
-                            <img src="entries/${entry}.png" alt="Entry ${entry}" loading="lazy">
+                        <div class="entry-image-container" onclick="openImageModal('${imagePath}', '${entry}')">
+                            <img src="${imagePath}" alt="Entry ${entry}" loading="lazy" onerror="this.style.display='none'">
                         </div>
                         <div class="entry-info">
-                            <div class="entry-title">Entry ${entry}</div>
+                            <div class="entry-title">${entry}</div>
                             <div class="entry-stats">
                                 <span class="vote-count">${data.count} rating${data.count !== 1 ? 's' : ''}</span>
                                 <span class="vote-percentage">Avg: ${averageScore}★</span>
@@ -1430,20 +1493,38 @@ ${JSON.stringify(results, null, 2)}
         });
 
         // Initialize
-        initializeStorage();
-        
-        // Firebase real-time sync
-        if (useFirebase) {
-            db.ref('ratings').on('value', snapshot => {
-                window.currentRatings = snapshot.val() || {};
-                render();
-            });
+        async function initializeApp() {
+            // First, load entries
+            const entriesLoaded = await loadEntries();
+            if (!entriesLoaded) {
+                await detectEntriesFromFolder();
+            }
+
+            if (entries.length === 0) {
+                console.error("No entries found! Please check entries.json or entries folder.");
+                document.getElementById('gallery').innerHTML = '<div class="no-entries">❌ No entries found. Please upload map files to the entries folder.</div>';
+                return;
+            }
+
+            // Initialize storage after entries are loaded
+            initializeStorage();
+            
+            // Firebase real-time sync
+            if (useFirebase) {
+                db.ref('ratings').on('value', snapshot => {
+                    window.currentRatings = snapshot.val() || {};
+                    render();
+                });
+            }
+            
+            if (localStorage.getItem('lastUpdated')) {
+                document.getElementById('lastUpdated').textContent = new Date(localStorage.getItem('lastUpdated')).toLocaleString();
+            }
+            render();
         }
-        
-        if (localStorage.getItem('lastUpdated')) {
-            document.getElementById('lastUpdated').textContent = new Date(localStorage.getItem('lastUpdated')).toLocaleString();
-        }
-        render();
+
+        // Start the app
+        initializeApp();
     </script>
 </body>
 </html>
