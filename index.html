@@ -1104,25 +1104,19 @@
 
         // Initialize storage
         function initializeStorage() {
-            if (useFirebase) {
-                // Firebase will auto-sync
-                db.ref('ratings').once('value', snapshot => {
-                    if (!snapshot.exists()) {
-                        const initialRatings = {};
-                        entries.forEach(entry => {
-                            initialRatings[entry] = { totalScore: 0, count: 0 };
-                        });
-                        db.ref('ratings').set(initialRatings);
-                    }
-                });
-            } else {
+            console.log("Initializing storage with", entries.length, "entries");
+            
+            if (!useFirebase) {
                 // Local storage fallback
                 if (!localStorage.getItem('mapContestRatings')) {
                     const ratings = {};
                     entries.forEach(entry => {
                         ratings[entry] = { totalScore: 0, count: 0, ratings: [] };
                     });
+                    console.log("Created new ratings object:", ratings);
                     localStorage.setItem('mapContestRatings', JSON.stringify(ratings));
+                } else {
+                    console.log("Ratings already exist in localStorage");
                 }
                 if (!localStorage.getItem('userRatings')) {
                     localStorage.setItem('userRatings', JSON.stringify({}));
@@ -1135,7 +1129,14 @@
             if (useFirebase) {
                 return window.currentRatings || {};
             }
-            return JSON.parse(localStorage.getItem('mapContestRatings')) || {};
+            const ratings = JSON.parse(localStorage.getItem('mapContestRatings')) || {};
+            // Ensure all entries have a rating object
+            entries.forEach(entry => {
+                if (!ratings[entry]) {
+                    ratings[entry] = { totalScore: 0, count: 0, ratings: [] };
+                }
+            });
+            return ratings;
         }
 
         // Get user's ratings
@@ -1153,18 +1154,28 @@
 
         // Submit rating
         function submitRating(entry, stars) {
+            console.log("Submitting rating:", entry, stars, "stars");
+            
             const userRatings = getUserRatings();
             const ratings = getRatings();
             const currentCount = getUserRatingCount();
+
+            // Ensure entry exists in ratings
+            if (!ratings[entry]) {
+                ratings[entry] = { totalScore: 0, count: 0, ratings: [] };
+                console.log("Created new rating entry for", entry);
+            }
 
             // If already rated this entry, just update
             if (userRatings[entry]) {
                 const oldRating = userRatings[entry];
                 ratings[entry].totalScore -= oldRating;
                 ratings[entry].count--;
+                console.log("Updated existing rating. Removing", oldRating, "stars");
             }
             // If not rated this entry and already have 3 ratings, show error
             else if (currentCount >= MAX_RATINGS) {
+                console.log("User already has", currentCount, "ratings, max is", MAX_RATINGS);
                 showToast('❌ You can only rate 3 maps!', 'error');
                 return;
             }
@@ -1173,6 +1184,8 @@
             userRatings[entry] = stars;
             ratings[entry].totalScore += stars;
             ratings[entry].count++;
+            
+            console.log("New rating saved. Total:", ratings[entry].totalScore, "Count:", ratings[entry].count);
 
             if (useFirebase) {
                 // Save to Firebase
@@ -1257,15 +1270,28 @@
                 });
         }
 
+        // Handle star clicks
+        function handleStarClick(event) {
+            if (event.target.classList.contains('star')) {
+                const starsDiv = event.target.closest('.stars');
+                if (starsDiv) {
+                    const entry = starsDiv.dataset.entry;
+                    const rating = parseInt(event.target.dataset.rating);
+                    console.log("Star clicked via event delegation:", entry, rating);
+                    submitRating(entry, rating);
+                }
+            }
+        }
+
         // Render star rating component
         function renderStars(entry) {
             const userRatings = getUserRatings();
             const userRating = userRatings[entry] || 0;
-            let starsHtml = '<div class="stars">';
+            let starsHtml = `<div class="stars" data-entry="${entry}">`;
 
             for (let i = 1; i <= 5; i++) {
                 const filled = i <= userRating ? 'filled' : '';
-                starsHtml += `<span class="star ${filled}" onclick="submitRating('${entry}', ${i})">⭐</span>`;
+                starsHtml += `<span class="star ${filled}" data-rating="${i}">⭐</span>`;
             }
 
             starsHtml += '</div>';
@@ -1323,6 +1349,9 @@
                     </div>
                 `;
             }).join('');
+            
+            // Add event listener for star clicks
+            gallery.addEventListener('click', handleStarClick);
         }
 
         // Render results
