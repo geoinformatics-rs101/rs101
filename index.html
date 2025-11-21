@@ -8,6 +8,9 @@
     <meta name="apple-mobile-web-app-title" content="Map Contest">
     <meta name="theme-color" content="#1a472a">
     <title>LULC Change Analysis Map Contest - Vote for Your Favorite</title>
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
     <style>
         * {
             margin: 0;
@@ -1000,6 +1003,31 @@
     </div>
 
     <script>
+        // Firebase Configuration - UPDATE WITH YOUR OWN CONFIG
+        const firebaseConfig = {
+            apiKey: "AIzaSyBnX-placeholder-replace-with-your-key",
+            authDomain: "lulc-map-contest.firebaseapp.com",
+            databaseURL: "https://lulc-map-contest-default-rtdb.firebaseio.com",
+            projectId: "lulc-map-contest",
+            storageBucket: "lulc-map-contest.appspot.com",
+            messagingSenderId: "1234567890",
+            appId: "1:1234567890:web:1234567890abcdef"
+        };
+
+        // Initialize Firebase
+        let db;
+        let useFirebase = false;
+
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+            useFirebase = true;
+            console.log("Firebase initialized successfully");
+        } catch (error) {
+            console.log("Firebase not available, using local storage:", error.message);
+            useFirebase = false;
+        }
+
         // Entry list
         const entries = [
             'A', 'AA', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 'AI', 'AJ', 'AK', 'AL', 'AM', 'AN',
@@ -1010,26 +1038,46 @@
 
         // Initialize storage
         function initializeStorage() {
-            if (!localStorage.getItem('mapContestRatings')) {
-                const ratings = {};
-                entries.forEach(entry => {
-                    ratings[entry] = { totalScore: 0, count: 0, ratings: [] };
+            if (useFirebase) {
+                // Firebase will auto-sync
+                db.ref('ratings').once('value', snapshot => {
+                    if (!snapshot.exists()) {
+                        const initialRatings = {};
+                        entries.forEach(entry => {
+                            initialRatings[entry] = { totalScore: 0, count: 0 };
+                        });
+                        db.ref('ratings').set(initialRatings);
+                    }
                 });
-                localStorage.setItem('mapContestRatings', JSON.stringify(ratings));
-            }
-            if (!localStorage.getItem('userRatings')) {
-                localStorage.setItem('userRatings', JSON.stringify({}));
+            } else {
+                // Local storage fallback
+                if (!localStorage.getItem('mapContestRatings')) {
+                    const ratings = {};
+                    entries.forEach(entry => {
+                        ratings[entry] = { totalScore: 0, count: 0, ratings: [] };
+                    });
+                    localStorage.setItem('mapContestRatings', JSON.stringify(ratings));
+                }
+                if (!localStorage.getItem('userRatings')) {
+                    localStorage.setItem('userRatings', JSON.stringify({}));
+                }
             }
         }
 
         // Get all ratings data
         function getRatings() {
-            return JSON.parse(localStorage.getItem('mapContestRatings'));
+            if (useFirebase) {
+                return window.currentRatings || {};
+            }
+            return JSON.parse(localStorage.getItem('mapContestRatings')) || {};
         }
 
         // Get user's ratings
         function getUserRatings() {
-            return JSON.parse(localStorage.getItem('userRatings'));
+            if (useFirebase) {
+                return window.userRatings || {};
+            }
+            return JSON.parse(localStorage.getItem('userRatings')) || {};
         }
 
         // Count user ratings
@@ -1060,8 +1108,16 @@
             ratings[entry].totalScore += stars;
             ratings[entry].count++;
 
-            localStorage.setItem('userRatings', JSON.stringify(userRatings));
-            localStorage.setItem('mapContestRatings', JSON.stringify(ratings));
+            if (useFirebase) {
+                // Save to Firebase
+                db.ref('ratings/' + entry).set(ratings[entry]);
+                localStorage.setItem('userRatings', JSON.stringify(userRatings));
+            } else {
+                // Local storage fallback
+                localStorage.setItem('userRatings', JSON.stringify(userRatings));
+                localStorage.setItem('mapContestRatings', JSON.stringify(ratings));
+            }
+            
             updateTimestamp();
             render();
             showToast(`✓ Entry ${entry} rated ${stars} star${stars !== 1 ? 's' : ''}!`);
@@ -1375,6 +1431,15 @@ ${JSON.stringify(results, null, 2)}
 
         // Initialize
         initializeStorage();
+        
+        // Firebase real-time sync
+        if (useFirebase) {
+            db.ref('ratings').on('value', snapshot => {
+                window.currentRatings = snapshot.val() || {};
+                render();
+            });
+        }
+        
         if (localStorage.getItem('lastUpdated')) {
             document.getElementById('lastUpdated').textContent = new Date(localStorage.getItem('lastUpdated')).toLocaleString();
         }
