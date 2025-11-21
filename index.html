@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Map Contest">
+    <meta name="theme-color" content="#1a472a">
+    <title>LULC Change Analysis Map Contest - Vote for Your Favorite</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        button, input, textarea {
+            -webkit-user-select: text;
+            user-select: text;
+        }
+
+        body {
+            -webkit-text-size-adjust: 100%;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a472a 0%, #2d5a3d 25%, #3d7a4e 50%, #2d5a3d 75%, #1a472a 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 50px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        header p {
+            font-size: 1.1rem;
+            opacity: 0.95;
+            margin-bottom: 30px;
+        }
+
+        .controls {
+            background: rgba(255, 200, 0, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+            color: white;
+            border: 2px solid rgba(255, 200, 0, 0.3);
+        }
+
+        .floating-clear-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 999;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            border-radius: 50px;
+            padding: 18px 32px;
+            border: none;
+            color: white;
+            font-weight: 700;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 12px 40px rgba(239, 68, 68, 0.4), 0 0 20px rgba(239, 68, 68, 0.2);
+        }
+
+        .floating-clear-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 18px 50px rgba(239, 68, 68, 0.5), 0 0 30px rgba(239, 68, 68, 0.3);
+        }
+
+        .floating-clear-btn:active {
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            .floating-clear-btn {
+                bottom: 20px;
+                right: 20px;
+                padding: 14px 26px;
+                font-size: 1rem;
+            }
+        }
+
+        .controls button, .controls input {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            -webkit-tap-highlight-color: transparent;
+            min-height: 44px;
+            min-width: 44px;
+        }
+
+        .controls button {
+            background: linear-gradient(135deg, #ffcc00 0%, #ffa500 100%);
+            color: #1a1a1a;
+            font-weight: 600;
+        }
+
+        .controls button:hover {
+            background: linear-gradient(135deg, #ffd700 0%, #ffb700 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(255, 200, 0, 0.4);
+        }
+
+        .controls input {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            border: 1px solid rgba(255, 200, 0, 0.5);
+            width: 150px;
+        }
+
+        .controls input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .entry-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            border: 2px solid transparent;
+        }
+
+        .entry-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            border: 2px solid #ffcc00;
+        }
+
+        .entry-image-container {
+            position: relative;
+            width: 100%;
+            padding-bottom: 100%;
+            overflow: hidden;
+            background: #f0f0f0;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .entry-image-container:hover {
+            filter: brightness(0.9);
+        }
+
+        .entry-image-container img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .entry-image-container:hover img {
+            transform: scale(1.05);
+        }
+
+        .entry-info {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+
+        .entry-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .entry-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+        }
+
+        .vote-count {
+            color: #22c55e;
+            font-weight: 600;
+        }
+
+        .vote-percentage {
+            color: #f59e0b;
+            font-weight: 600;
+        }
+
+        .vote-bar {
+            width: 100%;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .vote-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #22c55e 0%, #84cc16 50%, #fbbf24 100%);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+        }
+
+        .star-rating {
+            display: flex;
+            gap: 8px;
+            margin-top: auto;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .stars {
+            display: flex;
+            gap: 5px;
+            font-size: 1.8rem;
+            cursor: pointer;
+        }
+
+        .star {
+            cursor: pointer;
+            transition: all 0.2s ease;
+            filter: brightness(0.6);
+            padding: 5px;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .star:active {
+            transform: scale(1.2);
+        }
+
+        .star:hover,
+        .star.filled {
+            filter: brightness(1);
+            transform: scale(1.15);
+        }
+
+        .star-label {
+            font-size: 0.85rem;
+            color: #666;
+            min-width: 30px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .rating-info {
+            font-size: 0.85rem;
+            color: #999;
+            text-align: center;
+            margin-top: 5px;
+        }
+
+        .submit-btn {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: scale(1.02);
+            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
+        }
+
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .rated-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .results-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 2px solid rgba(255, 200, 0, 0.3);
+        }
+
+        .results-section h2 {
+            font-size: 1.8rem;
+            color: #333;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .results-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .result-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .result-item:hover {
+            background: #f0f0f0;
+        }
+
+        .result-rank {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #22c55e;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .result-entry {
+            font-weight: 600;
+            color: #333;
+            min-width: 50px;
+            font-size: 1.1rem;
+        }
+
+        .result-bar-container {
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .result-bar {
+            flex-grow: 1;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .result-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #22c55e 0%, #84cc16 50%, #fbbf24 100%);
+            border-radius: 4px;
+        }
+
+        .result-votes {
+            min-width: 80px;
+            text-align: right;
+            font-weight: 600;
+            color: #f59e0b;
+            font-size: 1.1rem;
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 40px;
+            opacity: 0.8;
+            font-size: 0.95rem;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8rem;
+            }
+
+            header p {
+                font-size: 0.95rem;
+            }
+
+            .gallery {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 15px;
+            }
+
+            .controls {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .controls input {
+                width: 100%;
+            }
+
+            .controls button {
+                width: 100%;
+            }
+
+            .results-section {
+                margin-top: 30px;
+                padding: 20px;
+            }
+
+            .floating-clear-btn {
+                bottom: 20px;
+                right: 20px;
+                padding: 14px 26px;
+                font-size: 1rem;
+            }
+
+            .entry-stats {
+                flex-direction: column;
+                gap: 8px;
+                font-size: 0.9rem;
+            }
+
+            .star-rating {
+                gap: 5px;
+            }
+
+            .stars {
+                gap: 3px;
+                font-size: 1.5rem;
+            }
+
+            .modal-content {
+                width: 95%;
+                max-width: 450px;
+                margin: 10% auto;
+            }
+
+            .image-modal-close {
+                top: 10px;
+                right: 10px;
+                width: 50px;
+                height: 50px;
+                font-size: 2.5rem;
+            }
+
+            .image-modal-title {
+                bottom: 15px;
+                font-size: 1.2rem;
+                padding: 12px 20px;
+            }
+
+            .entry-card {
+                border-radius: 10px;
+            }
+
+            .entry-image-container {
+                padding-bottom: 100%;
+            }
+
+            .result-item {
+                padding: 12px;
+                gap: 10px;
+            }
+
+            .result-rank {
+                min-width: 35px;
+                font-size: 1.1rem;
+            }
+
+            .result-entry {
+                min-width: 45px;
+                font-size: 1rem;
+            }
+
+            .result-votes {
+                min-width: 70px;
+                font-size: 0.95rem;
+            }
+
+            body {
+                padding: 20px 15px;
+            }
+
+            .container {
+                max-width: 100%;
+            }
+
+            header {
+                margin-bottom: 30px;
+            }
+
+            .controls {
+                padding: 15px;
+                margin-bottom: 30px;
+                border-radius: 10px;
+            }
+
+            .vote-bar {
+                height: 5px;
+            }
+
+            .rating-info {
+                font-size: 0.8rem;
+                margin-top: 3px;
+            }
+
+            .modal-buttons {
+                gap: 8px;
+            }
+
+            .modal-buttons button {
+                padding: 8px 16px;
+                font-size: 0.9rem;
+                flex: 1;
+            }
+
+            .passcode-modal-input {
+                font-size: 16px;
+                padding: 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            header h1 {
+                font-size: 1.4rem;
+                margin-bottom: 8px;
+            }
+
+            header p {
+                font-size: 0.85rem;
+                margin-bottom: 20px;
+            }
+
+            .gallery {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .controls {
+                padding: 12px;
+                gap: 8px;
+            }
+
+            .controls button, .controls input {
+                padding: 9px 16px;
+                font-size: 0.9rem;
+            }
+
+            .entry-title {
+                font-size: 1.1rem;
+            }
+
+            .entry-stats {
+                font-size: 0.85rem;
+            }
+
+            .vote-count, .vote-percentage {
+                font-size: 0.85rem;
+            }
+
+            .stars {
+                gap: 2px;
+                font-size: 1.3rem;
+            }
+
+            .star {
+                width: 28px;
+                height: 28px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .rated-badge {
+                font-size: 0.8rem;
+                padding: 3px 10px;
+            }
+
+            .floating-clear-btn {
+                bottom: 15px;
+                right: 15px;
+                padding: 12px 20px;
+                font-size: 0.9rem;
+                border-radius: 25px;
+            }
+
+            .modal-content {
+                width: 90%;
+                max-width: 350px;
+                padding: 20px;
+            }
+
+            .modal-header {
+                font-size: 1.3rem;
+                margin-bottom: 15px;
+            }
+
+            .modal-body {
+                font-size: 0.95rem;
+            }
+
+            .modal-body textarea {
+                font-size: 0.85rem;
+                height: 150px;
+                padding: 8px;
+            }
+
+            .image-modal-img {
+                max-width: 100%;
+                max-height: 90%;
+            }
+
+            .image-modal-close {
+                top: 8px;
+                right: 8px;
+                width: 45px;
+                height: 45px;
+                font-size: 2rem;
+            }
+
+            .image-modal-title {
+                font-size: 1rem;
+                bottom: 10px;
+                padding: 10px 15px;
+            }
+
+            body {
+                padding: 15px 10px;
+            }
+
+            .container {
+                padding: 0;
+            }
+
+            .entry-info {
+                padding: 15px;
+            }
+
+            .result-item {
+                padding: 10px;
+                flex-wrap: wrap;
+            }
+
+            .result-rank {
+                min-width: 30px;
+                font-size: 1rem;
+            }
+
+            .result-entry {
+                min-width: 40px;
+                font-size: 0.9rem;
+            }
+
+            .result-bar-container {
+                width: 100%;
+                order: 3;
+                margin-top: 8px;
+            }
+
+            .result-votes {
+                min-width: 60px;
+                font-size: 0.85rem;
+                order: 4;
+                width: 100%;
+                margin-top: 5px;
+                text-align: left;
+            }
+
+            .footer {
+                font-size: 0.8rem;
+                margin-top: 30px;
+                padding: 0 10px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            header h1 {
+                font-size: 1.2rem;
+            }
+
+            .gallery {
+                gap: 10px;
+            }
+
+            .floating-clear-btn {
+                padding: 10px 18px;
+                font-size: 0.85rem;
+            }
+
+            .controls button, .controls input {
+                font-size: 0.85rem;
+                padding: 8px 14px;
+            }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .modal-body {
+            margin-bottom: 20px;
+            color: #666;
+        }
+
+        .modal-body textarea {
+            width: 100%;
+            height: 200px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .modal-buttons button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            min-height: 44px;
+            font-size: 1rem;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .modal-buttons .btn-primary {
+            background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+            color: white;
+        }
+
+        .modal-buttons .btn-primary:hover {
+            transform: scale(1.02);
+            box-shadow: 0 5px 15px rgba(34, 197, 94, 0.4);
+        }
+
+        .modal-buttons .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .modal-buttons .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #4caf50;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            animation: slideIn 0.3s ease;
+            z-index: 2000;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .no-entries {
+            text-align: center;
+            color: white;
+            padding: 40px;
+            font-size: 1.2rem;
+        }
+
+        .image-modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .image-modal-content {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .image-modal-img {
+            max-width: 95%;
+            max-height: 95%;
+            object-fit: contain;
+            animation: zoomIn 0.3s ease;
+        }
+
+        @keyframes zoomIn {
+            from {
+                transform: scale(0.9);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .image-modal-close {
+            position: absolute;
+            top: 20px;
+            right: 40px;
+            font-size: 3rem;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .image-modal-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        .image-modal-title {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 15px 30px;
+            border-radius: 8px;
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🗺️ LULC Change Analysis Map Contest</h1>
+            <p>Vote for your favorite 2010-2020 land use & land cover projection</p>
+        </header>
+
+        <div class="controls">
+            <button id="downloadBtn">📥 Download Results</button>
+            <input type="text" id="filterInput" placeholder="Search entries (e.g., A, B1)...">
+        </div>
+
+        <button id="clearBtn" class="floating-clear-btn">🔄 Clear All Ratings</button>
+
+        <div class="gallery" id="gallery">
+            <!-- Entry cards will be generated here -->
+        </div>
+
+
+
+        <footer class="footer">
+            <p>Site hosted by Center for Geoinformatics - Benguet State University <br>Last updated: <span id="lastUpdated">Never</span></p>
+        </footer>
+    </div>
+
+    <!-- Modal for passcode -->
+    <div id="passcodeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Enter Passcode</div>
+            <div class="modal-body">
+                <p>This feature is protected. Please enter the passcode:</p>
+                <input type="password" id="passcodeInput" placeholder="Enter passcode" style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; margin-top: 10px; -webkit-user-select: text; user-select: text;">
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-secondary" onclick="closePasscodeModal()">Cancel</button>
+                <button class="btn-primary" onclick="checkPasscode()">Submit</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for image fullscreen -->
+    <div id="imageModal" class="image-modal">
+        <div class="image-modal-content">
+            <button class="image-modal-close" onclick="closeImageModal()">×</button>
+            <img id="fullscreenImage" class="image-modal-img" alt="Fullscreen entry image">
+            <div id="imageModalTitle" class="image-modal-title"></div>
+        </div>
+    </div>
+
+    <!-- Modal for results download -->
+    <div id="resultsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Download Voting Results</div>
+            <div class="modal-body">
+                <p>Copy the voting results data below:</p>
+                <textarea id="resultsData" readonly></textarea>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-secondary" onclick="closeResultsModal()">Close</button>
+                <button class="btn-primary" onclick="copyToClipboard()">📋 Copy to Clipboard</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Entry list
+        const entries = [
+            'A', 'AA', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 'AI', 'AJ', 'AK', 'AL', 'AM', 'AN',
+            'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
+        ];
+
+        const MAX_RATINGS = 3;
+
+        // Initialize storage
+        function initializeStorage() {
+            if (!localStorage.getItem('mapContestRatings')) {
+                const ratings = {};
+                entries.forEach(entry => {
+                    ratings[entry] = { totalScore: 0, count: 0, ratings: [] };
+                });
+                localStorage.setItem('mapContestRatings', JSON.stringify(ratings));
+            }
+            if (!localStorage.getItem('userRatings')) {
+                localStorage.setItem('userRatings', JSON.stringify({}));
+            }
+        }
+
+        // Get all ratings data
+        function getRatings() {
+            return JSON.parse(localStorage.getItem('mapContestRatings'));
+        }
+
+        // Get user's ratings
+        function getUserRatings() {
+            return JSON.parse(localStorage.getItem('userRatings'));
+        }
+
+        // Count user ratings
+        function getUserRatingCount() {
+            return Object.keys(getUserRatings()).length;
+        }
+
+        // Submit rating
+        function submitRating(entry, stars) {
+            const userRatings = getUserRatings();
+            const ratings = getRatings();
+            const currentCount = getUserRatingCount();
+
+            // If already rated this entry, just update
+            if (userRatings[entry]) {
+                const oldRating = userRatings[entry];
+                ratings[entry].totalScore -= oldRating;
+                ratings[entry].count--;
+            }
+            // If not rated this entry and already have 3 ratings, show error
+            else if (currentCount >= MAX_RATINGS) {
+                showToast('❌ You can only rate 3 maps!', 'error');
+                return;
+            }
+
+            // Add new rating
+            userRatings[entry] = stars;
+            ratings[entry].totalScore += stars;
+            ratings[entry].count++;
+
+            localStorage.setItem('userRatings', JSON.stringify(userRatings));
+            localStorage.setItem('mapContestRatings', JSON.stringify(ratings));
+            updateTimestamp();
+            render();
+            showToast(`✓ Entry ${entry} rated ${stars} star${stars !== 1 ? 's' : ''}!`);
+        }
+
+        // Remove rating
+        function removeRating(entry) {
+            const userRatings = getUserRatings();
+            const ratings = getRatings();
+
+            if (userRatings[entry]) {
+                const rating = userRatings[entry];
+                ratings[entry].totalScore -= rating;
+                ratings[entry].count--;
+
+                delete userRatings[entry];
+                localStorage.setItem('userRatings', JSON.stringify(userRatings));
+                localStorage.setItem('mapContestRatings', JSON.stringify(ratings));
+                updateTimestamp();
+                render();
+                showToast('Rating removed');
+            }
+        }
+
+        // Clear all ratings
+        function clearAllRatings() {
+            if (confirm('Are you sure you want to clear all your ratings?')) {
+                const userRatings = getUserRatings();
+                const ratings = getRatings();
+
+                // Remove user's contributions from totals
+                Object.keys(userRatings).forEach(entry => {
+                    ratings[entry].totalScore -= userRatings[entry];
+                    ratings[entry].count--;
+                });
+
+                localStorage.setItem('userRatings', JSON.stringify({}));
+                localStorage.setItem('mapContestRatings', JSON.stringify(ratings));
+                updateTimestamp();
+                render();
+                showToast('All ratings cleared!');
+            }
+        }
+
+        // Update timestamp
+        function updateTimestamp() {
+            const now = new Date();
+            localStorage.setItem('lastUpdated', now.toISOString());
+            document.getElementById('lastUpdated').textContent = now.toLocaleString();
+        }
+
+        // Get sorted results
+        function getSortedResults() {
+            const ratings = getRatings();
+            return entries
+                .map(entry => {
+                    const data = ratings[entry];
+                    return {
+                        entry,
+                        totalScore: data.totalScore,
+                        count: data.count,
+                        averageScore: data.count > 0 ? (data.totalScore / data.count).toFixed(2) : 0
+                    };
+                })
+                .filter(r => r.count > 0)
+                .sort((a, b) => {
+                    if (b.averageScore !== a.averageScore) {
+                        return b.averageScore - a.averageScore;
+                    }
+                    return b.count - a.count;
+                });
+        }
+
+        // Render star rating component
+        function renderStars(entry) {
+            const userRatings = getUserRatings();
+            const userRating = userRatings[entry] || 0;
+            let starsHtml = '<div class="stars">';
+
+            for (let i = 1; i <= 5; i++) {
+                const filled = i <= userRating ? 'filled' : '';
+                starsHtml += `<span class="star ${filled}" onclick="submitRating('${entry}', ${i})">⭐</span>`;
+            }
+
+            starsHtml += '</div>';
+
+            if (userRating > 0) {
+                starsHtml += `<div class="rated-badge">✓ Rated ${userRating} star${userRating !== 1 ? 's' : ''}</div>`;
+            }
+
+            return starsHtml;
+        }
+
+        // Render gallery
+        function render() {
+            const gallery = document.getElementById('gallery');
+            const filterInput = document.getElementById('filterInput').value.toLowerCase();
+            const userRatings = getUserRatings();
+            const ratings = getRatings();
+            const ratingCount = Object.keys(userRatings).length;
+
+            const filtered = entries.filter(entry =>
+                entry.toLowerCase().includes(filterInput)
+            );
+
+            if (filtered.length === 0) {
+                gallery.innerHTML = '<div class="no-entries">No entries found</div>';
+                return;
+            }
+
+            gallery.innerHTML = filtered.map(entry => {
+                const data = ratings[entry];
+                const averageScore = data.count > 0 ? (data.totalScore / data.count).toFixed(2) : '-';
+
+                return `
+                    <div class="entry-card">
+                        <div class="entry-image-container" onclick="openImageModal('entries/${entry}.png', '${entry}')">
+                            <img src="entries/${entry}.png" alt="Entry ${entry}" loading="lazy">
+                        </div>
+                        <div class="entry-info">
+                            <div class="entry-title">Entry ${entry}</div>
+                            <div class="entry-stats">
+                                <span class="vote-count">${data.count} rating${data.count !== 1 ? 's' : ''}</span>
+                                <span class="vote-percentage">Avg: ${averageScore}★</span>
+                            </div>
+                            <div class="vote-bar">
+                                <div class="vote-bar-fill" style="width: ${(averageScore / 5) * 100}%"></div>
+                            </div>
+                            <div class="star-rating">
+                                ${renderStars(entry)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Render results
+        function renderResults() {
+            const resultsList = document.getElementById('resultsList');
+            const results = getSortedResults();
+
+            if (results.length === 0) {
+                resultsList.innerHTML = '<div style="text-align: center; padding: 20px; color: #999;">No ratings yet</div>';
+                return;
+            }
+
+            resultsList.innerHTML = results.map((result, index) => {
+                const medals = ['🥇', '🥈', '🥉'];
+                const medal = index < 3 ? medals[index] : '•';
+                const stars = '⭐'.repeat(Math.round(result.averageScore));
+
+                return `
+                    <div class="result-item">
+                        <div class="result-rank">${medal}</div>
+                        <div class="result-entry">Entry ${result.entry}</div>
+                        <div class="result-bar-container">
+                            <div class="result-bar">
+                                <div class="result-bar-fill" style="width: ${(result.averageScore / 5) * 100}%"></div>
+                            </div>
+                        </div>
+                        <div class="result-votes">${result.averageScore}★ (${result.count} ratings)</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Toggle results view
+        function toggleResults() {
+            const resultsSection = document.getElementById('resultsSection');
+            const isHidden = resultsSection.style.display === 'none';
+            resultsSection.style.display = isHidden ? 'block' : 'none';
+            if (isHidden) {
+                renderResults();
+                resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        // Download results
+        function downloadResults() {
+            document.getElementById('passcodeModal').style.display = 'block';
+            document.getElementById('passcodeInput').value = '';
+            document.getElementById('passcodeInput').focus();
+        }
+
+        function checkPasscode() {
+            const passcode = document.getElementById('passcodeInput').value;
+            const correctPasscode = 'RS101';
+
+            if (passcode === correctPasscode) {
+                closePasscodeModal();
+                showResultsData();
+            } else {
+                showToast('❌ Incorrect passcode', 'error');
+                document.getElementById('passcodeInput').value = '';
+            }
+        }
+
+        function closePasscodeModal() {
+            document.getElementById('passcodeModal').style.display = 'none';
+            document.getElementById('passcodeInput').value = '';
+        }
+
+        function showResultsData() {
+            const results = getSortedResults();
+            const timestamp = new Date().toLocaleString();
+            let csv = 'Rank,Entry,Average Rating,Number of Ratings\n';
+
+            results.forEach((result, index) => {
+                csv += `${index + 1},${result.entry},${result.averageScore},${result.count}\n`;
+            });
+
+            const data = {
+                title: 'LULC Change Analysis Map Contest - Rating Results',
+                timestamp,
+                totalParticipants: Math.ceil(getUserRatingCount() / 3),
+                csv,
+                json: JSON.stringify(results, null, 2)
+            };
+
+            document.getElementById('resultsData').value = `
+LULC Change Analysis Map Contest - Rating Results
+Generated: ${timestamp}
+
+===== SUMMARY =====
+Total Ratings Submitted: ${getUserRatingCount()}
+
+===== CSV FORMAT =====
+${csv}
+
+===== JSON FORMAT =====
+${JSON.stringify(results, null, 2)}
+            `;
+
+            document.getElementById('resultsModal').style.display = 'block';
+        }
+
+        function closeResultsModal() {
+            document.getElementById('resultsModal').style.display = 'none';
+        }
+
+        function copyToClipboard() {
+            const textarea = document.getElementById('resultsData');
+            textarea.select();
+            document.execCommand('copy');
+            showToast('Copied to clipboard!');
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            if (type === 'error') {
+                toast.style.background = '#f44336';
+            }
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // Image modal functions
+        function openImageModal(imageSrc, entry) {
+            document.getElementById('fullscreenImage').src = imageSrc;
+            document.getElementById('imageModalTitle').textContent = `Entry ${entry}`;
+            document.getElementById('imageModal').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeImageModal() {
+            document.getElementById('imageModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        // Close image modal when clicking outside the image
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('imageModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeImageModal();
+                }
+            });
+
+            // Close with Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeImageModal();
+                    closePasscodeModal();
+                }
+            });
+
+            // Enter key for passcode submission
+            document.getElementById('passcodeInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    checkPasscode();
+                }
+            });
+        });
+
+        // Event listeners
+        document.getElementById('filterInput').addEventListener('input', render);
+        document.getElementById('clearBtn').addEventListener('click', clearAllRatings);
+        document.getElementById('downloadBtn').addEventListener('click', downloadResults);
+
+        window.addEventListener('click', (e) => {
+            const modal = document.getElementById('resultsModal');
+            if (e.target === modal) {
+                closeResultsModal();
+            }
+        });
+
+        // Initialize
+        initializeStorage();
+        if (localStorage.getItem('lastUpdated')) {
+            document.getElementById('lastUpdated').textContent = new Date(localStorage.getItem('lastUpdated')).toLocaleString();
+        }
+        render();
+    </script>
+</body>
+</html>
